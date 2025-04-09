@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import DropDownPicker from 'react-native-dropdown-picker';
-import { CURRENCY_PAIRS } from '../constants/currencies';
+import { CURRENCY_PAIRS, getCurrencyPairBySymbol } from '../constants/currencies';
 import { COLORS } from '../constants/colors';
+import CurrencyPairModal from './CurrencyPairModal';
 
 interface CurrencyPairSelectorProps {
   label: string;
@@ -18,19 +18,12 @@ const CurrencyPairSelector: React.FC<CurrencyPairSelectorProps> = ({
   onPairChange,
   isDarkMode = false,
 }) => {
-  const [open, setOpen] = useState(false);
-  const [items, setItems] = useState(
-    CURRENCY_PAIRS.map((pair) => ({
-      label: pair.symbol,
-      value: pair.symbol,
-      icon: () => (
-        <Text style={styles.pairSymbol}>
-          {pair.baseCurrency}/{pair.quoteCurrency}
-        </Text>
-      ),
-    }))
-  );
+  const [modalVisible, setModalVisible] = useState(false);
 
+  // Get selected pair details
+  const selectedPairDetails = getCurrencyPairBySymbol(selectedPair);
+
+  // Colors based on theme
   const backgroundColor = isDarkMode ? COLORS.cardDark : COLORS.card;
   const textColor = isDarkMode ? COLORS.textDark : COLORS.text;
   const borderColor = isDarkMode ? COLORS.borderDark : COLORS.border;
@@ -38,39 +31,37 @@ const CurrencyPairSelector: React.FC<CurrencyPairSelectorProps> = ({
   return (
     <View style={styles.container}>
       <Text style={[styles.label, { color: textColor }]}>{label}</Text>
-      <DropDownPicker
-        open={open}
-        value={selectedPair}
-        items={items}
-        setOpen={setOpen}
-        setValue={(callback) => {
-          const newValue = callback(selectedPair);
-          if (typeof newValue === 'string') {
-            onPairChange(newValue);
-          }
-        }}
-        setItems={setItems}
-        style={[styles.picker, { backgroundColor, borderColor }]}
-        textStyle={{ color: textColor }}
-        dropDownContainerStyle={[
-          styles.dropDownContainer,
-          { backgroundColor, borderColor },
-        ]}
-        ArrowDownIconComponent={() => (
-          <MaterialIcons name="keyboard-arrow-down" size={24} color={textColor} />
-        )}
-        ArrowUpIconComponent={() => (
-          <MaterialIcons name="keyboard-arrow-up" size={24} color={textColor} />
-        )}
-        TickIconComponent={() => (
-          <MaterialIcons name="check" size={18} color={COLORS.primary} />
-        )}
-        listMode="SCROLLVIEW"
-        scrollViewProps={{
-          nestedScrollEnabled: true,
-        }}
-        searchable={true}
-        searchPlaceholder="Search currency pair..."
+      
+      <TouchableOpacity
+        style={[styles.selector, { backgroundColor, borderColor }]}
+        onPress={() => setModalVisible(true)}
+      >
+        <View style={styles.pairInfo}>
+          <Text style={[styles.pairSymbol, { color: textColor }]}>
+            {selectedPair}
+          </Text>
+          {selectedPairDetails && (
+            <Text style={[styles.pairDetail, { color: textColor }]}>
+              {`Base: ${selectedPairDetails.baseCurrency} / Quote: ${selectedPairDetails.quoteCurrency}`}
+            </Text>
+          )}
+        </View>
+        
+        <MaterialIcons
+          name="keyboard-arrow-down"
+          size={24}
+          color={textColor}
+        />
+      </TouchableOpacity>
+
+      <CurrencyPairModal
+        isVisible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSelect={onPairChange}
+        pairs={CURRENCY_PAIRS}
+        selectedPair={selectedPair}
+        title="Select Currency Pair"
+        isDarkMode={isDarkMode}
       />
     </View>
   );
@@ -85,18 +76,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
   },
-  picker: {
+  selector: {
+    height: 56,
     borderRadius: 8,
     borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
   },
-  dropDownContainer: {
-    borderRadius: 8,
-    borderWidth: 1,
-    elevation: 5,
+  pairInfo: {
+    flex: 1,
   },
   pairSymbol: {
     fontSize: 16,
-    marginRight: 8,
+    fontWeight: '500',
+  },
+  pairDetail: {
+    fontSize: 14,
+    marginTop: 2,
   },
 });
 

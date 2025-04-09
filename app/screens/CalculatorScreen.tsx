@@ -8,15 +8,17 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import Toast from 'react-native-toast-message';
+import FlashMessage, { showMessage } from 'react-native-flash-message';
 
 import { COLORS } from '../constants/colors';
 import { getCurrencyPairBySymbol } from '../constants/currencies';
 import { LOT_SIZES } from '../constants/lotSizes';
 import { calculatePipValue, convertLotToUnits } from '../utils/pipCalculator';
+import { getExchangeRate } from '../services/api';
 
 import CurrencySelector from '../components/CurrencySelector';
 import CurrencyPairSelector from '../components/CurrencyPairSelector';
@@ -26,7 +28,7 @@ import ResultCard from '../components/ResultCard';
 import Header from '../components/Header';
 
 interface CalculatorScreenProps {
-  navigation?: any;
+  navigation: any;
   isDarkMode?: boolean;
   onThemeToggle?: () => void;
 }
@@ -49,6 +51,7 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
   const [calculationResult, setCalculationResult] = useState<any>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Get currency pair details
   const pairDetails = getCurrencyPairBySymbol(currencyPair);
@@ -59,13 +62,18 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
   const textColor = isDarkMode ? COLORS.textDark : COLORS.text;
   const cardColor = isDarkMode ? COLORS.cardDark : COLORS.card;
 
+  // Navigate to info screen
+  const navigateToInfo = () => {
+    navigation.navigate('Info');
+  };
+
   // Calculate pip value when inputs change
   const calculateResults = async () => {
     if (!pairDetails) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Currency Pair',
-        text2: 'Please select a valid currency pair',
+      showMessage({
+        message: "Invalid Currency Pair",
+        description: "Please select a valid currency pair",
+        type: "danger",
       });
       return;
     }
@@ -92,22 +100,42 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
 
       setCalculationResult(result);
       setLastUpdated(new Date());
+      
+      showMessage({
+        message: "Calculation Complete",
+        description: "Pip values have been updated",
+        type: "success",
+      });
     } catch (error) {
       console.error('Calculation error:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Calculation Error',
-        text2: 'Failed to calculate pip value',
+      showMessage({
+        message: "Calculation Error",
+        description: "Failed to calculate pip value. Please try again.",
+        type: "danger",
       });
     } finally {
       setIsCalculating(false);
+      setRefreshing(false);
     }
   };
 
-  // Calculate on initial load
+  // Handle pull-to-refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    calculateResults();
+  };
+
+  // Calculate on initial load and when currency pair or account currency changes
   useEffect(() => {
     calculateResults();
-  }, []);
+  }, [currencyPair, accountCurrency]);
+
+  // Update decimal places when currency pair changes
+  useEffect(() => {
+    if (pairDetails) {
+      setDecimalPlaces(pairDetails.pipDecimalPlace);
+    }
+  }, [currencyPair]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
@@ -125,6 +153,14 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[COLORS.primary]}
+              tintColor={isDarkMode ? COLORS.primary : COLORS.primary}
+            />
+          }
         >
           <View style={[styles.card, { backgroundColor: cardColor }]}>
             <Text style={[styles.sectionTitle, { color: textColor }]}>
@@ -180,23 +216,36 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
             />
           </View>
 
-          <TouchableOpacity
-            style={[
-              styles.calculateButton,
-              { backgroundColor: isDarkMode ? COLORS.primaryDark : COLORS.primary },
-            ]}
-            onPress={calculateResults}
-            disabled={isCalculating}
-          >
-            {isCalculating ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <>
-                <MaterialIcons name="calculate" size={20} color="#FFFFFF" />
-                <Text style={styles.calculateButtonText}>Calculate</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[
+                styles.calculateButton,
+                { backgroundColor: isDarkMode ? COLORS.primaryDark : COLORS.primary },
+              ]}
+              onPress={calculateResults}
+              disabled={isCalculating}
+            >
+              {isCalculating ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <>
+                  <MaterialIcons name="calculate" size={20} color="#FFFFFF" />
+                  <Text style={styles.calculateButtonText}>Calculate</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.infoButton,
+                { backgroundColor: isDarkMode ? COLORS.secondaryDark : COLORS.secondary },
+              ]}
+              onPress={navigateToInfo}
+            >
+              <MaterialIcons name="info-outline" size={20} color="#FFFFFF" />
+              <Text style={styles.infoButtonText}>Info</Text>
+            </TouchableOpacity>
+          </View>
 
           {calculationResult && (
             <ResultCard
@@ -216,11 +265,14 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
             <Text style={[styles.footerText, { color: textColor }]}>
               Last updated: {lastUpdated ? lastUpdated.toLocaleTimeString() : 'Never'}
             </Text>
+            <Text style={[styles.footerNote, { color: textColor }]}>
+              Pull down to refresh exchange rates
+            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <Toast />
+      <FlashMessage position="top" />
     </SafeAreaView>
   );
 };
@@ -254,15 +306,35 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 16,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 8,
+  },
   calculateButton: {
+    flex: 3,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
     borderRadius: 8,
-    marginVertical: 8,
+    marginRight: 8,
   },
   calculateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  infoButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 8,
+  },
+  infoButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
@@ -275,6 +347,11 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
+    marginBottom: 4,
+  },
+  footerNote: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
 });
 

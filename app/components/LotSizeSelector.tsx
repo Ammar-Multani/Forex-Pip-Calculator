@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import DropDownPicker from 'react-native-dropdown-picker';
-import { LOT_SIZE_LABELS } from '../constants/lotSizes';
+import { LOT_SIZE_LABELS, LOT_SIZES, getLotUnits } from '../constants/lotSizes';
 import { COLORS } from '../constants/colors';
 
 interface LotSizeSelectorProps {
@@ -38,6 +38,7 @@ const LotSizeSelector: React.FC<LotSizeSelectorProps> = ({
   const textColor = isDarkMode ? COLORS.textDark : COLORS.text;
   const borderColor = isDarkMode ? COLORS.borderDark : COLORS.border;
   const placeholderColor = isDarkMode ? COLORS.disabled : COLORS.placeholder;
+  const secondaryColor = isDarkMode ? COLORS.secondaryDark : COLORS.secondary;
 
   const handleLotCountChange = (text: string) => {
     const count = parseFloat(text) || 0;
@@ -51,11 +52,28 @@ const LotSizeSelector: React.FC<LotSizeSelectorProps> = ({
     }
   };
 
+  const calculateTotalUnits = (): number => {
+    if (selectedLotType === 'CUSTOM') {
+      return customUnits;
+    }
+    return getLotUnits(selectedLotType as keyof typeof LOT_SIZES) * lotCount;
+  };
+
+  const totalUnits = calculateTotalUnits();
+
   return (
     <View style={styles.container}>
       <Text style={[styles.label, { color: textColor }]}>{label}</Text>
+      
+      <View style={styles.infoContainer}>
+        <Text style={[styles.infoText, { color: textColor }]}>
+          Select the lot type and quantity. The calculator will convert this to units.
+        </Text>
+      </View>
+      
       <View style={styles.row}>
         <View style={styles.pickerContainer}>
+          <Text style={[styles.subLabel, { color: textColor }]}>Lot Type</Text>
           <DropDownPicker
             open={open}
             value={selectedLotType}
@@ -83,9 +101,11 @@ const LotSizeSelector: React.FC<LotSizeSelectorProps> = ({
             TickIconComponent={() => (
               <MaterialIcons name="check" size={18} color={COLORS.primary} />
             )}
+            zIndex={1000}
           />
         </View>
         <View style={styles.inputContainer}>
+          <Text style={[styles.subLabel, { color: textColor }]}>Quantity</Text>
           <TextInput
             style={[
               styles.input,
@@ -103,7 +123,7 @@ const LotSizeSelector: React.FC<LotSizeSelectorProps> = ({
       {selectedLotType === 'CUSTOM' && onCustomUnitsChange && (
         <View style={styles.customUnitsContainer}>
           <Text style={[styles.subLabel, { color: textColor }]}>
-            Custom Units:
+            Custom Units
           </Text>
           <TextInput
             style={[
@@ -118,6 +138,12 @@ const LotSizeSelector: React.FC<LotSizeSelectorProps> = ({
           />
         </View>
       )}
+      
+      <View style={[styles.totalUnitsContainer, { backgroundColor: secondaryColor }]}>
+        <Text style={styles.totalUnitsText}>
+          Total Units: {totalUnits.toLocaleString()}
+        </Text>
+      </View>
     </View>
   );
 };
@@ -131,18 +157,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
   },
+  infoContainer: {
+    marginBottom: 12,
+  },
+  infoText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
   subLabel: {
     fontSize: 14,
     marginBottom: 4,
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    zIndex: 1000,
   },
   pickerContainer: {
     flex: 2,
     marginRight: 8,
-    zIndex: 1000,
   },
   inputContainer: {
     flex: 1,
@@ -165,6 +198,7 @@ const styles = StyleSheet.create({
   },
   customUnitsContainer: {
     marginTop: 12,
+    zIndex: 900,
   },
   customInput: {
     height: 50,
@@ -172,6 +206,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 16,
+  },
+  totalUnitsContainer: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  totalUnitsText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 });
 

@@ -1,16 +1,21 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useTheme } from '../context/ThemeContext';
 
 import CalculatorScreen from '../screens/CalculatorScreen';
 import InfoScreen from '../screens/InfoScreen';
 
 const Stack = createNativeStackNavigator();
 
-const AppNavigator: React.FC = () => {
-  const { isDarkMode, toggleTheme } = useTheme();
+interface AppNavigatorProps {
+  isDarkMode: boolean;
+  onThemeToggle: () => void;
+}
 
+const AppNavigator: React.FC<AppNavigatorProps> = ({
+  isDarkMode,
+  onThemeToggle,
+}) => {
   return (
     <NavigationContainer>
       <Stack.Navigator
@@ -25,7 +30,7 @@ const AppNavigator: React.FC = () => {
             <CalculatorScreen
               {...props}
               isDarkMode={isDarkMode}
-              onThemeToggle={toggleTheme}
+              onThemeToggle={onThemeToggle}
             />
           )}
         </Stack.Screen>
@@ -34,7 +39,7 @@ const AppNavigator: React.FC = () => {
             <InfoScreen
               {...props}
               isDarkMode={isDarkMode}
-              onThemeToggle={toggleTheme}
+              onThemeToggle={onThemeToggle}
             />
           )}
         </Stack.Screen>
