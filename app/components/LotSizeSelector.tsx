@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import DropDownPicker from 'react-native-dropdown-picker';
-import { LOT_SIZE_LABELS, LOT_SIZES, getLotUnits } from '../constants/lotSizes';
+import { LOT_SIZE_LABELS, LOT_SIZES, getLotUnits, updateLotSize } from '../constants/lotSizes';
 import { COLORS } from '../constants/colors';
 
 interface LotSizeSelectorProps {
@@ -26,19 +25,17 @@ const LotSizeSelector: React.FC<LotSizeSelectorProps> = ({
   onCustomUnitsChange,
   isDarkMode = false,
 }) => {
-  const [open, setOpen] = useState(false);
-  const [items, setItems] = useState(
-    Object.entries(LOT_SIZE_LABELS).map(([key, value]) => ({
-      label: value,
-      value: key,
-    }))
-  );
-
+  const [modalVisible, setModalVisible] = useState(false);
+  const [lotSizeModalVisible, setLotSizeModalVisible] = useState(false);
+  const [editingLotType, setEditingLotType] = useState<string | null>(null);
+  const [editingLotValue, setEditingLotValue] = useState<string>('');
+  
   const backgroundColor = isDarkMode ? COLORS.cardDark : COLORS.card;
   const textColor = isDarkMode ? COLORS.textDark : COLORS.text;
   const borderColor = isDarkMode ? COLORS.borderDark : COLORS.border;
   const placeholderColor = isDarkMode ? COLORS.disabled : COLORS.placeholder;
   const secondaryColor = isDarkMode ? COLORS.secondaryDark : COLORS.secondary;
+  const modalBackgroundColor = isDarkMode ? COLORS.backgroundDark : COLORS.background;
 
   const handleLotCountChange = (text: string) => {
     const count = parseFloat(text) || 0;
@@ -49,6 +46,28 @@ const LotSizeSelector: React.FC<LotSizeSelectorProps> = ({
     if (onCustomUnitsChange) {
       const units = parseInt(text, 10) || 0;
       onCustomUnitsChange(units);
+    }
+  };
+
+  const handleLotTypeSelect = (type: string) => {
+    onLotTypeChange(type);
+    setModalVisible(false);
+  };
+
+  const openLotSizeEditor = (lotType: string) => {
+    if (lotType !== 'CUSTOM') {
+      setEditingLotType(lotType);
+      setEditingLotValue(LOT_SIZES[lotType as keyof typeof LOT_SIZES].toString());
+      setLotSizeModalVisible(true);
+    }
+  };
+
+  const saveLotSizeValue = () => {
+    if (editingLotType) {
+      const value = parseInt(editingLotValue, 10) || 0;
+      updateLotSize(editingLotType as keyof typeof LOT_SIZES, value);
+      setLotSizeModalVisible(false);
+      setEditingLotType(null);
     }
   };
 
@@ -74,35 +93,15 @@ const LotSizeSelector: React.FC<LotSizeSelectorProps> = ({
       <View style={styles.row}>
         <View style={styles.pickerContainer}>
           <Text style={[styles.subLabel, { color: textColor }]}>Lot Type</Text>
-          <DropDownPicker
-            open={open}
-            value={selectedLotType}
-            items={items}
-            setOpen={setOpen}
-            setValue={(callback) => {
-              const newValue = callback(selectedLotType);
-              if (typeof newValue === 'string') {
-                onLotTypeChange(newValue);
-              }
-            }}
-            setItems={setItems}
+          <TouchableOpacity
             style={[styles.picker, { backgroundColor, borderColor }]}
-            textStyle={{ color: textColor }}
-            dropDownContainerStyle={[
-              styles.dropDownContainer,
-              { backgroundColor, borderColor },
-            ]}
-            ArrowDownIconComponent={() => (
-              <MaterialIcons name="keyboard-arrow-down" size={24} color={textColor} />
-            )}
-            ArrowUpIconComponent={() => (
-              <MaterialIcons name="keyboard-arrow-up" size={24} color={textColor} />
-            )}
-            TickIconComponent={() => (
-              <MaterialIcons name="check" size={18} color={COLORS.primary} />
-            )}
-            zIndex={1000}
-          />
+            onPress={() => setModalVisible(true)}
+          >
+            <Text style={{ color: textColor }}>
+              {LOT_SIZE_LABELS[selectedLotType as keyof typeof LOT_SIZE_LABELS]}
+            </Text>
+            <MaterialIcons name="keyboard-arrow-down" size={24} color={textColor} />
+          </TouchableOpacity>
         </View>
         <View style={styles.inputContainer}>
           <Text style={[styles.subLabel, { color: textColor }]}>Quantity</Text>
@@ -119,6 +118,24 @@ const LotSizeSelector: React.FC<LotSizeSelectorProps> = ({
           />
         </View>
       </View>
+
+      {selectedLotType !== 'CUSTOM' && (
+        <View style={styles.lotSizeInfoContainer}>
+          <Text style={[styles.lotSizeInfoText, { color: textColor }]}>
+            1 {LOT_SIZE_LABELS[selectedLotType as keyof typeof LOT_SIZE_LABELS]} = 
+            {' '}{LOT_SIZES[selectedLotType as keyof typeof LOT_SIZES].toLocaleString()} units
+          </Text>
+          <TouchableOpacity 
+            style={styles.editButton}
+            onPress={() => openLotSizeEditor(selectedLotType)}
+          >
+            <MaterialIcons name="edit" size={16} color={isDarkMode ? COLORS.primaryDark : COLORS.primary} />
+            <Text style={[styles.editButtonText, { color: isDarkMode ? COLORS.primaryDark : COLORS.primary }]}>
+              Edit
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {selectedLotType === 'CUSTOM' && onCustomUnitsChange && (
         <View style={styles.customUnitsContainer}>
@@ -144,6 +161,110 @@ const LotSizeSelector: React.FC<LotSizeSelectorProps> = ({
           Total Units: {totalUnits.toLocaleString()}
         </Text>
       </View>
+
+      <Modal
+        visible={modalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: modalBackgroundColor }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
+              <Text style={[styles.modalTitle, { color: textColor }]}>Select Lot Type</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <MaterialIcons name="close" size={24} color={textColor} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalScrollView}>
+              {Object.entries(LOT_SIZE_LABELS).map(([key, value]) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[
+                    styles.modalItem,
+                    {
+                      backgroundColor: key === selectedLotType 
+                        ? isDarkMode ? COLORS.primaryDark : COLORS.primary 
+                        : 'transparent',
+                    },
+                  ]}
+                  onPress={() => handleLotTypeSelect(key)}
+                >
+                  <Text
+                    style={[
+                      styles.modalItemText,
+                      {
+                        color: key === selectedLotType ? '#FFFFFF' : textColor,
+                        fontWeight: key === selectedLotType ? 'bold' : 'normal',
+                      },
+                    ]}
+                  >
+                    {value}
+                  </Text>
+                  {key !== 'CUSTOM' && (
+                    <Text
+                      style={[
+                        styles.modalItemDetail,
+                        { color: key === selectedLotType ? '#FFFFFF' : textColor },
+                      ]}
+                    >
+                      {LOT_SIZES[key as keyof typeof LOT_SIZES]?.toLocaleString()} units
+                    </Text>
+                  )}
+                  {key === selectedLotType && (
+                    <MaterialIcons name="check" size={20} color="#FFFFFF" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={lotSizeModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setLotSizeModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.editorModalContent, { backgroundColor: modalBackgroundColor }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
+              <Text style={[styles.modalTitle, { color: textColor }]}>
+                Edit {editingLotType ? LOT_SIZE_LABELS[editingLotType as keyof typeof LOT_SIZE_LABELS] : ''} Lot Size
+              </Text>
+              <TouchableOpacity onPress={() => setLotSizeModalVisible(false)}>
+                <MaterialIcons name="close" size={24} color={textColor} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.editorContent}>
+              <Text style={[styles.editorLabel, { color: textColor }]}>
+                Units per lot:
+              </Text>
+              <TextInput
+                style={[
+                  styles.editorInput,
+                  { backgroundColor, color: textColor, borderColor },
+                ]}
+                value={editingLotValue}
+                onChangeText={setEditingLotValue}
+                keyboardType="numeric"
+                placeholder="Enter units"
+                placeholderTextColor={placeholderColor}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.saveButton,
+                  { backgroundColor: isDarkMode ? COLORS.primaryDark : COLORS.primary },
+                ]}
+                onPress={saveLotSizeValue}
+              >
+                <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -171,23 +292,22 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    zIndex: 1000,
   },
   pickerContainer: {
     flex: 2,
     marginRight: 8,
   },
+  picker: {
+    height: 50,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   inputContainer: {
     flex: 1,
-  },
-  picker: {
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  dropDownContainer: {
-    borderRadius: 8,
-    borderWidth: 1,
-    elevation: 5,
   },
   input: {
     height: 50,
@@ -196,9 +316,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 16,
   },
+  lotSizeInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  lotSizeInfoText: {
+    fontSize: 14,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 4,
+  },
+  editButtonText: {
+    fontSize: 14,
+    marginLeft: 4,
+  },
   customUnitsContainer: {
     marginTop: 12,
-    zIndex: 900,
   },
   customInput: {
     height: 50,
@@ -217,6 +355,91 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    maxHeight: '70%',
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  editorModalContent: {
+    width: '80%',
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  modalScrollView: {
+    padding: 16,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginVertical: 4,
+  },
+  modalItemText: {
+    fontSize: 16,
+  },
+  modalItemDetail: {
+    fontSize: 14,
+    marginLeft: 8,
+    flex: 1,
+    textAlign: 'right',
+    marginRight: 8,
+  },
+  editorContent: {
+    padding: 16,
+  },
+  editorLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  editorInput: {
+    height: 50,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  saveButton: {
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

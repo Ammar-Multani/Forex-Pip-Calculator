@@ -52,6 +52,7 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
   const [isCalculating, setIsCalculating] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
   // Get currency pair details
   const pairDetails = getCurrencyPairBySymbol(currencyPair);
@@ -65,6 +66,29 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
   // Navigate to info screen
   const navigateToInfo = () => {
     navigation.navigate('Info');
+  };
+
+  // Fetch exchange rate
+  const fetchExchangeRate = async () => {
+    if (!pairDetails) return;
+    
+    try {
+      const { quoteCurrency } = pairDetails;
+      if (quoteCurrency === accountCurrency) {
+        setExchangeRate(1);
+        return;
+      }
+      
+      const rateData = await getExchangeRate(quoteCurrency, accountCurrency);
+      setExchangeRate(rateData.rate);
+    } catch (error) {
+      console.error('Error fetching exchange rate:', error);
+      showMessage({
+        message: "Exchange Rate Error",
+        description: "Could not fetch current exchange rate. Using estimated values.",
+        type: "warning",
+      });
+    }
   };
 
   // Calculate pip value when inputs change
@@ -81,6 +105,11 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
     setIsCalculating(true);
 
     try {
+      // Fetch exchange rate if needed
+      if (!exchangeRate) {
+        await fetchExchangeRate();
+      }
+      
       // Calculate position size based on lot type and count
       let positionSize = lotCount;
       
@@ -122,13 +151,23 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
   // Handle pull-to-refresh
   const onRefresh = async () => {
     setRefreshing(true);
+    setExchangeRate(null); // Reset exchange rate to force a fresh fetch
+    await fetchExchangeRate();
     calculateResults();
   };
 
-  // Calculate on initial load and when currency pair or account currency changes
+  // Fetch exchange rate when currency pair or account currency changes
   useEffect(() => {
-    calculateResults();
+    setExchangeRate(null);
+    fetchExchangeRate();
   }, [currencyPair, accountCurrency]);
+
+  // Calculate when exchange rate is updated
+  useEffect(() => {
+    if (exchangeRate !== null) {
+      calculateResults();
+    }
+  }, [exchangeRate]);
 
   // Update decimal places when currency pair changes
   useEffect(() => {

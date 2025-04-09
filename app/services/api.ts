@@ -1,11 +1,8 @@
 import axios from 'axios';
 import { CURRENCY_PAIRS } from '../constants/currencies';
 
-// Base URL for forex API
+// Base URL for forex API - using a free and reliable API
 const API_URL = 'https://api.exchangerate.host';
-
-// API key (replace with your actual API key if needed)
-const API_KEY = '';
 
 // Types
 export interface ExchangeRate {
@@ -25,14 +22,23 @@ export interface ForexData {
 // Get current exchange rates for a base currency
 export const getExchangeRates = async (baseCurrency: string): Promise<ForexData> => {
   try {
+    // Using exchangerate.host API which doesn't require an API key
     const response = await axios.get(`${API_URL}/latest`, {
       params: {
         base: baseCurrency,
-        access_key: API_KEY,
       },
+      timeout: 10000, // 10 second timeout
     });
     
-    return response.data;
+    if (response.data && response.data.rates) {
+      return {
+        rates: response.data.rates,
+        base: response.data.base,
+        timestamp: new Date(response.data.date).getTime() / 1000,
+      };
+    }
+    
+    throw new Error('Invalid response format');
   } catch (error) {
     console.error('Error fetching exchange rates:', error);
     // Return mock data if API fails
@@ -46,15 +52,44 @@ export const getExchangeRate = async (
   targetCurrency: string
 ): Promise<ExchangeRate> => {
   try {
+    // Using exchangerate.host API for conversion
     const response = await axios.get(`${API_URL}/convert`, {
       params: {
         from: baseCurrency,
         to: targetCurrency,
-        access_key: API_KEY,
+      },
+      timeout: 10000, // 10 second timeout
+    });
+    
+    if (response.data && response.data.result) {
+      return {
+        base: baseCurrency,
+        target: targetCurrency,
+        rate: response.data.result,
+        timestamp: new Date(response.data.date).getTime() / 1000,
+        date: response.data.date,
+      };
+    }
+    
+    // Alternative approach if the above endpoint doesn't work
+    const ratesResponse = await axios.get(`${API_URL}/latest`, {
+      params: {
+        base: baseCurrency,
+        symbols: targetCurrency,
       },
     });
     
-    return response.data;
+    if (ratesResponse.data && ratesResponse.data.rates && ratesResponse.data.rates[targetCurrency]) {
+      return {
+        base: baseCurrency,
+        target: targetCurrency,
+        rate: ratesResponse.data.rates[targetCurrency],
+        timestamp: new Date(ratesResponse.data.date).getTime() / 1000,
+        date: ratesResponse.data.date,
+      };
+    }
+    
+    throw new Error('Invalid response format');
   } catch (error) {
     console.error('Error fetching exchange rate:', error);
     // Return mock data if API fails
@@ -73,6 +108,24 @@ export const getMockExchangeRates = (baseCurrency: string): ForexData => {
     CAD: 1.25,
     CHF: 0.92,
     NZD: 1.42,
+    CNY: 6.45,
+    HKD: 7.78,
+    SGD: 1.35,
+    SEK: 8.58,
+    NOK: 8.65,
+    MXN: 20.15,
+    INR: 74.38,
+    BRL: 5.25,
+    ZAR: 14.78,
+    RUB: 73.42,
+    TRY: 8.65,
+    PLN: 3.85,
+    THB: 33.12,
+    KRW: 1150.25,
+    DKK: 6.32,
+    IDR: 14350.0,
+    MYR: 4.18,
+    PHP: 50.25,
   };
   
   // Adjust rates based on the base currency
