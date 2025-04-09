@@ -28,15 +28,9 @@ export const getExchangeRates = async (baseCurrency: string): Promise<ForexData>
         base: baseCurrency,
       },
       timeout: 10000, // 10 second timeout
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
     });
     
     if (response.data && response.data.rates) {
-      console.log(`Fetched rates for ${baseCurrency}:`, response.data.rates);
       return {
         rates: response.data.rates,
         base: response.data.base,
@@ -63,18 +57,11 @@ export const getExchangeRate = async (
       params: {
         from: baseCurrency,
         to: targetCurrency,
-        amount: 1,
       },
       timeout: 10000, // 10 second timeout
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
     });
     
     if (response.data && response.data.result) {
-      console.log(`Fetched rate from ${baseCurrency} to ${targetCurrency}:`, response.data.result);
       return {
         base: baseCurrency,
         target: targetCurrency,
@@ -90,15 +77,9 @@ export const getExchangeRate = async (
         base: baseCurrency,
         symbols: targetCurrency,
       },
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
     });
     
     if (ratesResponse.data && ratesResponse.data.rates && ratesResponse.data.rates[targetCurrency]) {
-      console.log(`Fetched rate from ${baseCurrency} to ${targetCurrency} (alternative):`, ratesResponse.data.rates[targetCurrency]);
       return {
         base: baseCurrency,
         target: targetCurrency,
@@ -160,7 +141,6 @@ export const getMockExchangeRates = (baseCurrency: string): ForexData => {
     mockRates[baseCurrency] = 1;
   }
   
-  console.log(`Using mock rates for ${baseCurrency}`);
   return {
     rates: mockRates,
     base: baseCurrency,
@@ -175,7 +155,6 @@ export const getMockExchangeRate = (
 ): ExchangeRate => {
   const mockRates = getMockExchangeRates(baseCurrency);
   
-  console.log(`Using mock rate from ${baseCurrency} to ${targetCurrency}: ${mockRates.rates[targetCurrency] || 1}`);
   return {
     base: baseCurrency,
     target: targetCurrency,
@@ -207,7 +186,6 @@ export const getLiveCurrencyPairRates = async (): Promise<Record<string, number>
       }
     });
     
-    console.log('Fetched live currency pair rates');
     return pairRates;
   } catch (error) {
     console.error('Error fetching live currency pair rates:', error);
@@ -249,6 +227,5 @@ export const getMockCurrencyPairRates = (): Record<string, number> => {
     'NZD/JPY': 77.4,
   };
   
-  console.log('Using mock currency pair rates');
   return pairRates;
 };

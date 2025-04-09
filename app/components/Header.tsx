@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
 
 interface HeaderProps {
@@ -26,9 +26,9 @@ const Header: React.FC<HeaderProps> = ({
       <View style={styles.leftContainer}>
         {showBackButton && onBackPress && (
           <TouchableOpacity style={styles.backButton} onPress={onBackPress}>
-            <FontAwesome5
-              name="arrow-left"
-              size={20}
+            <MaterialIcons
+              name="arrow-back"
+              size={24}
               color={textColor}
             />
           </TouchableOpacity>
@@ -40,9 +40,9 @@ const Header: React.FC<HeaderProps> = ({
       <View style={styles.rightContainer}>
         {onThemeToggle && (
           <TouchableOpacity style={styles.themeButton} onPress={onThemeToggle}>
-            <FontAwesome5
-              name={isDarkMode ? 'sun' : 'moon'}
-              size={20}
+            <MaterialIcons
+              name={isDarkMode ? 'light-mode' : 'dark-mode'}
+              size={24}
               color={textColor}
             />
           </TouchableOpacity>
