@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
 import { formatCurrency, formatNumber } from '../utils/pipCalculator';
 
@@ -33,6 +34,9 @@ const ResultCard: React.FC<ResultCardProps> = ({
 
   const textColor = COLORS.textDark;
   const cardBgColor = isDarkMode ? COLORS.cardDark : COLORS.card;
+  const contentTextColor = isDarkMode ? COLORS.textDark : COLORS.text;
+  const highlightColor = isDarkMode ? COLORS.primary : COLORS.primaryDark;
+  const dividerColor = isDarkMode ? COLORS.borderDark : COLORS.border;
 
   return (
     <View style={[styles.container, { backgroundColor: cardBgColor }]}>
@@ -42,66 +46,103 @@ const ResultCard: React.FC<ResultCardProps> = ({
         end={{ x: 1, y: 0 }}
         style={styles.header}
       >
+        <FontAwesome5 name="chart-bar" size={20} color="#FFFFFF" style={styles.headerIcon} />
         <Text style={[styles.title, { color: textColor }]}>{title}</Text>
       </LinearGradient>
 
       <View style={styles.content}>
-        <View style={styles.row}>
-          <Text style={[styles.label, { color: isDarkMode ? COLORS.textDark : COLORS.text }]}>
-            Pip Value ({quoteCurrency}):
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: contentTextColor }]}>
+            Single Pip Value
           </Text>
-          <Text style={[styles.value, { color: isDarkMode ? COLORS.textDark : COLORS.text }]}>
-            {formatCurrency(pipValueInQuoteCurrency, quoteCurrency, 4)}
-          </Text>
+          
+          <View style={styles.row}>
+            <View style={styles.labelContainer}>
+              <FontAwesome5 name="money-bill-wave" size={14} color={contentTextColor} style={styles.rowIcon} />
+              <Text style={[styles.label, { color: contentTextColor }]}>
+                In {quoteCurrency}:
+              </Text>
+            </View>
+            <Text style={[styles.value, { color: contentTextColor }]}>
+              {formatCurrency(pipValueInQuoteCurrency, quoteCurrency, 4)}
+            </Text>
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.labelContainer}>
+              <FontAwesome5 name="money-bill-wave" size={14} color={contentTextColor} style={styles.rowIcon} />
+              <Text style={[styles.label, { color: contentTextColor }]}>
+                In {accountCurrency}:
+              </Text>
+            </View>
+            <Text style={[styles.value, { color: contentTextColor }]}>
+              {formatCurrency(pipValueInAccountCurrency, accountCurrency, 4)}
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.row}>
-          <Text style={[styles.label, { color: isDarkMode ? COLORS.textDark : COLORS.text }]}>
-            Pip Value ({accountCurrency}):
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: contentTextColor }]}>
+            Total Value
           </Text>
-          <Text style={[styles.value, { color: isDarkMode ? COLORS.textDark : COLORS.text }]}>
-            {formatCurrency(pipValueInAccountCurrency, accountCurrency, 4)}
-          </Text>
+          
+          <View style={styles.row}>
+            <View style={styles.labelContainer}>
+              <FontAwesome5 name="coins" size={14} color={contentTextColor} style={styles.rowIcon} />
+              <Text style={[styles.label, { color: contentTextColor }]}>
+                In {quoteCurrency}:
+              </Text>
+            </View>
+            <Text style={[styles.value, { color: contentTextColor }]}>
+              {formatCurrency(totalValueInQuoteCurrency, quoteCurrency, 2)}
+            </Text>
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.labelContainer}>
+              <FontAwesome5 name="coins" size={14} color={highlightColor} style={styles.rowIcon} />
+              <Text style={[styles.label, { color: highlightColor, fontWeight: 'bold' }]}>
+                In {accountCurrency}:
+              </Text>
+            </View>
+            <Text style={[styles.valueHighlight, { color: highlightColor }]}>
+              {formatCurrency(totalValueInAccountCurrency, accountCurrency, 2)}
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
-        <View style={styles.row}>
-          <Text style={[styles.label, { color: isDarkMode ? COLORS.textDark : COLORS.text }]}>
-            Total Value ({quoteCurrency}):
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: contentTextColor }]}>
+            Exchange Information
           </Text>
-          <Text style={[styles.value, { color: isDarkMode ? COLORS.textDark : COLORS.text }]}>
-            {formatCurrency(totalValueInQuoteCurrency, quoteCurrency, 2)}
-          </Text>
-        </View>
+          
+          <View style={styles.row}>
+            <View style={styles.labelContainer}>
+              <FontAwesome5 name="exchange-alt" size={14} color={contentTextColor} style={styles.rowIcon} />
+              <Text style={[styles.label, { color: contentTextColor }]}>
+                Rate:
+              </Text>
+            </View>
+            <Text style={[styles.value, { color: contentTextColor }]}>
+              1 {quoteCurrency} = {formatNumber(exchangeRate, 4)} {accountCurrency}
+            </Text>
+          </View>
 
-        <View style={styles.row}>
-          <Text style={[styles.label, { color: isDarkMode ? COLORS.textDark : COLORS.text }]}>
-            Total Value ({accountCurrency}):
-          </Text>
-          <Text style={[styles.valueHighlight, { color: isDarkMode ? COLORS.primary : COLORS.primaryDark }]}>
-            {formatCurrency(totalValueInAccountCurrency, accountCurrency, 2)}
-          </Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.row}>
-          <Text style={[styles.label, { color: isDarkMode ? COLORS.textDark : COLORS.text }]}>
-            Exchange Rate:
-          </Text>
-          <Text style={[styles.value, { color: isDarkMode ? COLORS.textDark : COLORS.text }]}>
-            1 {quoteCurrency} = {formatNumber(exchangeRate, 4)} {accountCurrency}
-          </Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={[styles.label, { color: isDarkMode ? COLORS.textDark : COLORS.text }]}>
-            Last Updated:
-          </Text>
-          <Text style={[styles.value, { color: isDarkMode ? COLORS.textDark : COLORS.text }]}>
-            {new Date().toLocaleTimeString()}
-          </Text>
+          <View style={styles.row}>
+            <View style={styles.labelContainer}>
+              <FontAwesome5 name="clock" size={14} color={contentTextColor} style={styles.rowIcon} />
+              <Text style={[styles.label, { color: contentTextColor }]}>
+                Updated:
+              </Text>
+            </View>
+            <Text style={[styles.value, { color: contentTextColor }]}>
+              {new Date().toLocaleTimeString()}
+            </Text>
+          </View>
         </View>
       </View>
     </View>
@@ -121,7 +162,12 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerIcon: {
+    marginRight: 8,
   },
   title: {
     fontSize: 18,
@@ -130,11 +176,26 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
   },
+  section: {
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginVertical: 6,
+  },
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rowIcon: {
+    marginRight: 8,
   },
   label: {
     fontSize: 14,
@@ -149,7 +210,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: COLORS.border,
     marginVertical: 12,
   },
 });

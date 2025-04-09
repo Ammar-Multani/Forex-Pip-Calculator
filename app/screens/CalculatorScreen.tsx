@@ -9,9 +9,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import FlashMessage, { showMessage } from 'react-native-flash-message';
 
 import { COLORS } from '../constants/colors';
@@ -53,6 +54,7 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [isLiveRate, setIsLiveRate] = useState(false);
 
   // Get currency pair details
   const pairDetails = getCurrencyPairBySymbol(currencyPair);
@@ -76,18 +78,32 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
       const { quoteCurrency } = pairDetails;
       if (quoteCurrency === accountCurrency) {
         setExchangeRate(1);
+        setIsLiveRate(true);
         return;
       }
       
+      setIsCalculating(true);
       const rateData = await getExchangeRate(quoteCurrency, accountCurrency);
       setExchangeRate(rateData.rate);
+      setIsLiveRate(true);
+      
+      showMessage({
+        message: "Exchange Rate Updated",
+        description: `1 ${quoteCurrency} = ${rateData.rate.toFixed(4)} ${accountCurrency}`,
+        type: "success",
+        duration: 3000,
+      });
     } catch (error) {
       console.error('Error fetching exchange rate:', error);
       showMessage({
         message: "Exchange Rate Error",
         description: "Could not fetch current exchange rate. Using estimated values.",
         type: "warning",
+        duration: 3000,
       });
+      setIsLiveRate(false);
+    } finally {
+      setIsCalculating(false);
     }
   };
 
@@ -134,6 +150,7 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
         message: "Calculation Complete",
         description: "Pip values have been updated",
         type: "success",
+        duration: 3000,
       });
     } catch (error) {
       console.error('Calculation error:', error);
@@ -202,9 +219,12 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
           }
         >
           <View style={[styles.card, { backgroundColor: cardColor }]}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>
-              Account Settings
-            </Text>
+            <View style={styles.cardHeader}>
+              <Text style={[styles.sectionTitle, { color: textColor }]}>
+                Account Settings
+              </Text>
+              <FontAwesome5 name="user-circle" size={20} color={isDarkMode ? COLORS.primaryDark : COLORS.primary} />
+            </View>
             <CurrencySelector
               label="Account Currency"
               selectedCurrency={accountCurrency}
@@ -214,9 +234,12 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
           </View>
 
           <View style={[styles.card, { backgroundColor: cardColor }]}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>
-              Instrument Selection
-            </Text>
+            <View style={styles.cardHeader}>
+              <Text style={[styles.sectionTitle, { color: textColor }]}>
+                Instrument Selection
+              </Text>
+              <FontAwesome5 name="chart-line" size={20} color={isDarkMode ? COLORS.primaryDark : COLORS.primary} />
+            </View>
             <CurrencyPairSelector
               label="Currency Pair"
               selectedPair={currencyPair}
@@ -226,9 +249,12 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
           </View>
 
           <View style={[styles.card, { backgroundColor: cardColor }]}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>
-              Position Size
-            </Text>
+            <View style={styles.cardHeader}>
+              <Text style={[styles.sectionTitle, { color: textColor }]}>
+                Position Size
+              </Text>
+              <FontAwesome5 name="balance-scale" size={20} color={isDarkMode ? COLORS.primaryDark : COLORS.primary} />
+            </View>
             <LotSizeSelector
               label="Lot Size"
               selectedLotType={lotType}
@@ -242,9 +268,12 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
           </View>
 
           <View style={[styles.card, { backgroundColor: cardColor }]}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>
-              Pip Settings
-            </Text>
+            <View style={styles.cardHeader}>
+              <Text style={[styles.sectionTitle, { color: textColor }]}>
+                Pip Settings
+              </Text>
+              <FontAwesome5 name="sliders-h" size={20} color={isDarkMode ? COLORS.primaryDark : COLORS.primary} />
+            </View>
             <PipInput
               label="Number of Pips"
               pipValue={pipValue}
@@ -268,7 +297,7 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <>
-                  <MaterialIcons name="calculate" size={20} color="#FFFFFF" />
+                  <FontAwesome5 name="calculator" size={18} color="#FFFFFF" />
                   <Text style={styles.calculateButtonText}>Calculate</Text>
                 </>
               )}
@@ -281,7 +310,7 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
               ]}
               onPress={navigateToInfo}
             >
-              <MaterialIcons name="info-outline" size={20} color="#FFFFFF" />
+              <FontAwesome5 name="info-circle" size={18} color="#FFFFFF" />
               <Text style={styles.infoButtonText}>Info</Text>
             </TouchableOpacity>
           </View>
@@ -301,6 +330,15 @@ const CalculatorScreen: React.FC<CalculatorScreenProps> = ({
           )}
 
           <View style={styles.footer}>
+            <View style={styles.rateStatusContainer}>
+              <View style={[
+                styles.statusIndicator, 
+                { backgroundColor: isLiveRate ? '#4CAF50' : '#FFC107' }
+              ]} />
+              <Text style={[styles.rateStatusText, { color: textColor }]}>
+                {isLiveRate ? 'Live Rates' : 'Estimated Rates'}
+              </Text>
+            </View>
             <Text style={[styles.footerText, { color: textColor }]}>
               Last updated: {lastUpdated ? lastUpdated.toLocaleTimeString() : 'Never'}
             </Text>
@@ -334,16 +372,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    elevation: 2,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 16,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -358,6 +401,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     marginRight: 8,
+    elevation: 2,
   },
   calculateButtonText: {
     color: '#FFFFFF',
@@ -372,6 +416,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     borderRadius: 8,
+    elevation: 2,
   },
   infoButtonText: {
     color: '#FFFFFF',
@@ -383,6 +428,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
     marginBottom: 16,
+  },
+  rateStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  rateStatusText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   footerText: {
     fontSize: 12,
