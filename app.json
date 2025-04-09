@@ -32,7 +32,7 @@
       [
         "expo-router",
         {
-          "origin": "https://${SUBDOMAIN}.dev.kiki.dev"
+          "origin": "https://pool-ecs-fargate-mvp-ssh-task-9a4692b0.dev.kiki.dev"
         }
       ],
       [
